@@ -1,19 +1,29 @@
-import { Controller, Get, Post, Body, Logger, Header } from '@nestjs/common';
+import { Controller, Get, Post, Body, Logger, Param, Put } from '@nestjs/common';
 import { TokenService } from './token.service';
 
 @Controller('token')
 export class TokenController {
-  constructor(private readonly appService: TokenService) { }
+  constructor(private readonly tokenService: TokenService) { }
   logger: Logger = new Logger('AppController', true);
 
   @Get()
-  getRegistrationTokens() {
-    this.logger.log('getRegistrationTokens');
-    return this.appService.getAllTokens();
+  async getAllTokens() {
+    this.logger.log('getAllTokens');
+    return this.tokenService.getAllTokens();
   }
-  @Post()
-  pushRegistrationToken(@Body() body) {
-    this.logger.log('pushRegistrationToken, body:' + JSON.stringify(body));
-    return this.appService.saveToken(body.token);
+
+  @Get('/interest')
+  async getAllTokenInterests() {
+    this.logger.log('getAllTokenInterests');
+    return this.tokenService.getAllTokenInterests();
+  }
+  @Get('/interest/:interest')
+  async getTokensForinterest(@Param() interest) {
+    return await this.tokenService.getTokensForInterest(interest);
+  }
+  @Put('/interest')
+  putRegistrationTokenForInterest(@Body() body) {
+    this.logger.log('putRegistrationTokenForInterest, body:' + JSON.stringify(body));
+    return this.tokenService.saveTokenForInterest(body.token, body.interest);
   }
 }
