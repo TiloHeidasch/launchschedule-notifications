@@ -1,9 +1,9 @@
 import { Controller, Get, Post, Body, Logger, Header } from '@nestjs/common';
-import { AppService } from './app.service';
+import { TokenService } from './token.service';
 
 @Controller('token')
-export class AppController {
-  constructor(private readonly appService: AppService) { }
+export class TokenController {
+  constructor(private readonly appService: TokenService) { }
   logger: Logger = new Logger('AppController', true);
 
   @Get()

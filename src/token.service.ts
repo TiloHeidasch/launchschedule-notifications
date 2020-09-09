@@ -3,7 +3,7 @@ import { promisify } from 'util';
 import { readFile, exists, writeFile } from 'fs';
 
 @Injectable()
-export class AppService {
+export class TokenService {
   private readonly filePath = 'data/tokens.json';
   async getAllTokens() {
     const file = await this.loadFile();
