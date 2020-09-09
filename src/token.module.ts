@@ -7,4 +7,4 @@ import { TokenService } from './token.service';
   controllers: [TokenController],
   providers: [TokenService],
 })
-export class TokenModule { }
+export class TokenModule {}
