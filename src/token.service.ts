@@ -47,7 +47,7 @@ export class TokenService {
     }
   }
 
-  private async loadFile(): Promise<{ tokenInterests: { token; interest }[] }> {
+  private async loadFile(): Promise<{ tokenInterests: any[] }> {
     try {
       if (await this.fileExists()) {
         const buffer = await promisify(readFile)(this.filePath);
