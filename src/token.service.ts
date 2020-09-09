@@ -50,11 +50,17 @@ export class TokenService {
 
   async saveTokenForInterest(token, interest) {
     const file = await this.loadFile();
-    if (
-      !file.tokenInterests.find(
-        otherTokenInterest => otherTokenInterest === { token, interest },
-      )
-    ) {
+    let exists = false;
+    file.tokenInterests.forEach(otherTokenInterest => {
+      if (
+        otherTokenInterest.token === token &&
+        otherTokenInterest.interest === interest
+      ) {
+        exists = true;
+        console.log(otherTokenInterest);
+      }
+    });
+    if (!exists) {
       file.tokenInterests.push({ token, interest });
       await promisify(writeFile)(
         this.filePath,
