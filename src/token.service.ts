@@ -5,17 +5,22 @@ import { readFile, exists, writeFile } from 'fs';
 @Injectable()
 export class TokenService {
   private readonly filePath = 'data/tokenInterests.json';
-  async getAllTokenInterests() {
+  async getAllTokenInterests(): Promise<{ token, interest }[]> {
     const file = await this.loadFile();
     return file.tokenInterests;
   }
-  async getAllTokens() {
+  async getAllTokens(): Promise<{ token }[]> {
     const tokenInterests = await this.getAllTokenInterests();
     const tokens = tokenInterests.map(tokenInterest => tokenInterest.token);
     return tokens.filter((value, index, self) => { return self.indexOf(value) === index; });
   }
 
-  async getTokensForInterest(interest) {
+  async getInterestsForToken(token): Promise<{ interest }[]> {
+    const tokenInterests = await this.getAllTokenInterests();
+    const interests = tokenInterests.filter((tokenInterest) => (tokenInterest.token === token));
+    return interests;
+  }
+  async getTokensForInterest(interest): Promise<{ token }[]> {
     const tokenInterests = await this.getAllTokenInterests();
     const tokens = tokenInterests.filter((tokenInterest) => (tokenInterest.interest === interest));
     return tokens;

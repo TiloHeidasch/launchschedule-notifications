@@ -11,6 +11,11 @@ export class TokenController {
     this.logger.log('getAllTokens');
     return this.tokenService.getAllTokens();
   }
+  @Get(':token')
+  async getInterestsForToken(@Param() token) {
+    this.logger.log('getInterestsForToken, token:' + token);
+    return await this.tokenService.getInterestsForToken(token);
+  }
 
   @Get('/interest')
   async getAllTokenInterests() {
@@ -18,8 +23,14 @@ export class TokenController {
     return this.tokenService.getAllTokenInterests();
   }
   @Get('/interest/:interest')
-  async getTokensForinterest(@Param() interest) {
+  async getTokensForInterest(@Param() interest) {
+    this.logger.log('getTokensForInterest, interest:' + JSON.stringify(interest));
     return await this.tokenService.getTokensForInterest(interest);
+  }
+  @Get('/interest/:interest/amount')
+  async getAmountForInterest(@Param() interest) {
+    this.logger.log('getAmountForInterest, interest:' + JSON.stringify(interest));
+    return (await this.tokenService.getTokensForInterest(interest)).length;
   }
   @Put('/interest')
   putRegistrationTokenForInterest(@Body() body) {
