@@ -19,16 +19,16 @@ export class TokenService {
 
   async getInterestsForToken(token): Promise<{ interest }[]> {
     const tokenInterests = await this.getAllTokenInterests();
-    const interests = tokenInterests.filter(
-      tokenInterest => tokenInterest.token === token,
-    );
+    const interests = tokenInterests
+      .filter(tokenInterest => tokenInterest.token === token)
+      .map(tokenInterest => tokenInterest.interest);
     return interests;
   }
   async getTokensForInterest(interest): Promise<{ token }[]> {
     const tokenInterests = await this.getAllTokenInterests();
-    const tokens = tokenInterests.filter(
-      tokenInterest => tokenInterest.interest === interest,
-    );
+    const tokens = tokenInterests
+      .filter(tokenInterest => tokenInterest.interest === interest)
+      .map(tokenInterest => tokenInterest.token);
     return tokens;
   }
 
