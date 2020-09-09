@@ -54,7 +54,9 @@ export class TokenController {
   }
   @Delete('/interest/:interest/:token')
   deleteRegistrationTokenForInterest(@Body() body) {
-    this.logger.log('putRegistrationTokenForInterest ' + JSON.stringify(body));
+    this.logger.log(
+      'deleteRegistrationTokenForInterest ' + JSON.stringify(body),
+    );
     return this.tokenService.deleteTokenForInterest(body.token, body.interest);
   }
 }
