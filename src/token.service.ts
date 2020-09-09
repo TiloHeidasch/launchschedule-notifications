@@ -70,10 +70,21 @@ export class TokenService {
   }
   async deleteTokenForInterest(token, interest) {
     const file = await this.loadFile();
-    file.tokenInterests = file.tokenInterests.filter(
-      tokenInterest => tokenInterest !== { token, interest },
-    );
-    file.tokenInterests.push({ token, interest });
+    const newTokenInterests: { token; interest }[] = [];
+    file.tokenInterests.forEach(tokenInterest => {
+      if (
+        tokenInterest.token === token &&
+        tokenInterest.interest === interest
+      ) {
+        // filter out
+      } else {
+        newTokenInterests.push({
+          token: tokenInterest.token,
+          interest: tokenInterest.interest,
+        });
+      }
+    });
+    file.tokenInterests = newTokenInterests;
     await promisify(writeFile)(
       this.filePath,
       JSON.stringify(file, undefined, 2),
