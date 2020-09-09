@@ -6,6 +6,7 @@ import {
   Logger,
   Param,
   Put,
+  Delete,
 } from '@nestjs/common';
 import { TokenService } from './token.service';
 
@@ -40,7 +41,7 @@ export class TokenController {
     this.logger.log('getTokensForInterest ' + JSON.stringify(interest));
     return await this.tokenService.getTokensForInterest(interest.interest);
   }
-  @Get('/interest/:interest/amount')
+  @Get('/interestamounts/:interest')
   async getAmountForInterest(@Param() interest) {
     this.logger.log('getAmountForInterest ' + JSON.stringify(interest));
     return (await this.tokenService.getTokensForInterest(interest.interest))
@@ -48,6 +49,11 @@ export class TokenController {
   }
   @Put('/interest')
   putRegistrationTokenForInterest(@Body() body) {
+    this.logger.log('putRegistrationTokenForInterest ' + JSON.stringify(body));
+    return this.tokenService.saveTokenForInterest(body.token, body.interest);
+  }
+  @Delete('/interest/')
+  deleteRegistrationTokenForInterest(@Body() body) {
     this.logger.log('putRegistrationTokenForInterest ' + JSON.stringify(body));
     return this.tokenService.saveTokenForInterest(body.token, body.interest);
   }
