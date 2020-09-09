@@ -62,6 +62,17 @@ export class TokenService {
       );
     }
   }
+  async deleteTokenForInterest(token, interest) {
+    const file = await this.loadFile();
+    file.tokenInterests = file.tokenInterests.filter(
+      tokenInterest => tokenInterest !== { token, interest },
+    );
+    file.tokenInterests.push({ token, interest });
+    await promisify(writeFile)(
+      this.filePath,
+      JSON.stringify(file, undefined, 2),
+    );
+  }
 
   private async loadFile(): Promise<{ tokenInterests: any[] }> {
     try {

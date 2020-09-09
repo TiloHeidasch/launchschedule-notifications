@@ -52,9 +52,9 @@ export class TokenController {
     this.logger.log('putRegistrationTokenForInterest ' + JSON.stringify(body));
     return this.tokenService.saveTokenForInterest(body.token, body.interest);
   }
-  @Delete('/interest/')
+  @Delete('/interest/:interest/:token')
   deleteRegistrationTokenForInterest(@Body() body) {
     this.logger.log('putRegistrationTokenForInterest ' + JSON.stringify(body));
-    return this.tokenService.saveTokenForInterest(body.token, body.interest);
+    return this.tokenService.deleteTokenForInterest(body.token, body.interest);
   }
 }
