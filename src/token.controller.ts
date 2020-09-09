@@ -30,6 +30,11 @@ export class TokenController {
     this.logger.log('getAllTokenInterests');
     return this.tokenService.getAllTokenInterests();
   }
+  @Get('/interestamounts')
+  async getAllTokenInterestAmounts() {
+    this.logger.log('getAllTokenInterestAmounts');
+    return this.tokenService.getAllTokenInterestAmounts();
+  }
   @Get('/interest/:interest')
   async getTokensForInterest(@Param() interest) {
     this.logger.log('getTokensForInterest ' + JSON.stringify(interest));

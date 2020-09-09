@@ -16,6 +16,22 @@ export class TokenService {
       return self.indexOf(value) === index;
     });
   }
+  async getAllTokenInterestAmounts() {
+    const tokenInterests = await this.getAllTokenInterests();
+    const interests = tokenInterests
+      .map(tokenInterest => tokenInterest.interest)
+      .filter((value, index, self) => {
+        return self.indexOf(value) === index;
+      });
+    const interestAmounts: { interest; amount }[] = [];
+    interests.forEach(interest => {
+      const amount = tokenInterests.filter(
+        tokenInterest => tokenInterest.interest === interest,
+      ).length;
+      interestAmounts.push({ interest, amount });
+    });
+    return interestAmounts;
+  }
 
   async getInterestsForToken(token): Promise<{ interest }[]> {
     const tokenInterests = await this.getAllTokenInterests();
