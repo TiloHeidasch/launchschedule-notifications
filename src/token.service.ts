@@ -1,13 +1,17 @@
 import { Injectable } from '@nestjs/common';
-import { promisify } from 'util';
-import { readFile, exists, writeFile } from 'fs';
+import { InjectModel } from '@nestjs/mongoose';
+import { TokenInterest } from './tokenInterest.schema';
+import { Model } from 'mongoose';
 
 @Injectable()
 export class TokenService {
   private readonly filePath = 'data/tokenInterests.json';
+  constructor(
+    @InjectModel(TokenInterest.name)
+    private tokenInterestModel: Model<TokenInterest>,
+  ) {}
   async getAllTokenInterests(): Promise<any[]> {
-    const file = await this.loadFile();
-    return file.tokenInterests;
+    return this.tokenInterestModel.find().exec();
   }
   async getAllTokens(): Promise<{ token }[]> {
     const tokenInterests = await this.getAllTokenInterests();
@@ -33,19 +37,13 @@ export class TokenService {
     return interestAmounts;
   }
 
-  async getInterestsForToken(token): Promise<{ interest }[]> {
-    const tokenInterests = await this.getAllTokenInterests();
-    const interests = tokenInterests
-      .filter(tokenInterest => tokenInterest.token === token)
-      .map(tokenInterest => tokenInterest.interest);
-    return interests;
+  async getInterestsForToken(token) {
+    return await this.tokenInterestModel.find({ token }).exec();
   }
   async getTokensForInterest(
     interest,
     notificationType?,
   ): Promise<{ token }[]> {
-    console.log({ interest, notificationType });
-
     const tokenInterests = await this.getAllTokenInterests();
     const tokenInterestsWithMatchingInterest = tokenInterests.filter(
       tokenInterest => tokenInterest.interest === interest,
@@ -95,95 +93,38 @@ export class TokenService {
   }
 
   async saveTokenForInterest(token, interest) {
-    const file = await this.loadFile();
-    let exists = false;
-    file.tokenInterests.forEach(otherTokenInterest => {
-      if (
-        otherTokenInterest.token === token &&
-        otherTokenInterest.interest === interest
-      ) {
-        exists = true;
-        console.log(otherTokenInterest);
-      }
-    });
-    if (!exists) {
-      file.tokenInterests.push({ token, interest });
-      await promisify(writeFile)(
-        this.filePath,
-        JSON.stringify(file, undefined, 2),
-      );
+    const existingEntries = await this.tokenInterestModel
+      .find({ token, interest })
+      .exec();
+    if (existingEntries.length > 0) {
+      return existingEntries[0];
     }
+    return await (
+      await this.tokenInterestModel.create({ token, interest })
+    ).execPopulate();
   }
   async markNotified(token, interest, notificationType) {
-    const file = await this.loadFile();
-    const newTokenInterests: any[] = [];
-    file.tokenInterests.forEach(tokenInterest => {
-      if (
-        tokenInterest.token === token &&
-        tokenInterest.interest === interest
-      ) {
-        newTokenInterests.push({
-          token: tokenInterest.token,
-          interest: tokenInterest.interest,
-          lastNotification: notificationType,
-        });
-      } else {
-        newTokenInterests.push({
-          token: tokenInterest.token,
-          interest: tokenInterest.interest,
-        });
-      }
-    });
-    file.tokenInterests = newTokenInterests;
-    await promisify(writeFile)(
-      this.filePath,
-      JSON.stringify(file, undefined, 2),
-    );
+    const existingEntries = await this.tokenInterestModel
+      .find({ token, interest })
+      .exec();
+    if (existingEntries.length > 0) {
+      return await this.tokenInterestModel
+        .update(
+          { token, interest },
+          { token, interest, lastNotification: notificationType },
+        )
+        .exec();
+    }
+    return await (
+      await this.tokenInterestModel.create({
+        token,
+        interest,
+        lastNotification: notificationType,
+      })
+    ).execPopulate();
   }
   async deleteTokenForInterest(token, interest) {
-    const file = await this.loadFile();
-    const newTokenInterests: any[] = [];
-    file.tokenInterests.forEach(tokenInterest => {
-      if (
-        tokenInterest.token === token &&
-        tokenInterest.interest === interest
-      ) {
-        // filter out
-      } else {
-        newTokenInterests.push({
-          token: tokenInterest.token,
-          interest: tokenInterest.interest,
-          lastNotification: tokenInterest.lastNotification,
-        });
-      }
-    });
-    file.tokenInterests = newTokenInterests;
-    await promisify(writeFile)(
-      this.filePath,
-      JSON.stringify(file, undefined, 2),
-    );
-  }
-
-  private async loadFile(): Promise<{ tokenInterests: any[] }> {
-    try {
-      if (await this.fileExists()) {
-        const buffer = await promisify(readFile)(this.filePath);
-        const tokenInterests = buffer.toString();
-        return tokenInterests
-          ? JSON.parse(tokenInterests)
-          : { tokenInterests: [] };
-      } else {
-        return { tokenInterests: [] };
-      }
-    } catch (error) {
-      console.log(error);
-      return { tokenInterests: [] };
-    }
-  }
-  /**
-   * Check if the result file exists.
-   */
-  private async fileExists() {
-    return await promisify(exists)(this.filePath);
+    return (await this.tokenInterestModel.deleteOne({ token, interest }))
+      .deletedCount;
   }
 }
