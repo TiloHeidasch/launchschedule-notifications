@@ -10,17 +10,22 @@ export class TokenService {
     @InjectModel(TokenInterest.name)
     private tokenInterestModel: Model<TokenInterest>,
   ) {}
-  async getAllTokenInterests(): Promise<any[]> {
+  async getAllTokenInterests(): Promise<TokenInterest[]> {
     return this.tokenInterestModel.find().exec();
   }
-  async getAllTokens(): Promise<{ token }[]> {
+  async getAllTokens(): Promise<string[]> {
     const tokenInterests = await this.getAllTokenInterests();
     const tokens = tokenInterests.map(tokenInterest => tokenInterest.token);
     return tokens.filter((value, index, self) => {
       return self.indexOf(value) === index;
     });
   }
-  async getAllTokenInterestAmounts() {
+  async getAllTokenInterestAmounts(): Promise<
+    {
+      interest: string;
+      amount: number;
+    }[]
+  > {
     const tokenInterests = await this.getAllTokenInterests();
     const interests = tokenInterests
       .map(tokenInterest => tokenInterest.interest)
@@ -37,15 +42,12 @@ export class TokenService {
     return interestAmounts;
   }
 
-  async getInterestsForToken(token) {
+  async getInterestsForToken(token): Promise<string[]> {
     return await (await this.tokenInterestModel.find({ token }).exec()).map(
       tokenInterest => tokenInterest.interest,
     );
   }
-  async getTokensForInterest(
-    interest,
-    notificationType?,
-  ): Promise<{ token }[]> {
+  async getTokensForInterest(interest, notificationType?): Promise<string[]> {
     const tokenInterests = await this.getAllTokenInterests();
     const tokenInterestsWithMatchingInterest = tokenInterests.filter(
       tokenInterest => tokenInterest.interest === interest,
@@ -94,7 +96,7 @@ export class TokenService {
     return tokens;
   }
 
-  async saveTokenForInterest(token, interest) {
+  async saveTokenForInterest(token, interest): Promise<TokenInterest> {
     const existingEntries = await this.tokenInterestModel
       .find({ token, interest })
       .exec();
@@ -105,7 +107,11 @@ export class TokenService {
       await this.tokenInterestModel.create({ token, interest })
     ).execPopulate();
   }
-  async markNotified(token, interest, notificationType) {
+  async markNotified(
+    token,
+    interest,
+    notificationType,
+  ): Promise<TokenInterest> {
     const existingEntries = await this.tokenInterestModel
       .find({ token, interest })
       .exec();
@@ -125,7 +131,7 @@ export class TokenService {
       })
     ).execPopulate();
   }
-  async deleteTokenForInterest(token, interest) {
+  async deleteTokenForInterest(token, interest): Promise<number> {
     return (await this.tokenInterestModel.deleteOne({ token, interest }))
       .deletedCount;
   }

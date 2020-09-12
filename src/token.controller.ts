@@ -10,6 +10,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { TokenService } from './token.service';
+import { TokenInterest } from './tokenInterest.schema';
 
 @Controller()
 export class TokenController {
@@ -17,23 +18,25 @@ export class TokenController {
   logger: Logger = new Logger('TokenController', true);
 
   @Get('/token')
-  async getAllTokens() {
+  async getAllTokens(): Promise<string[]> {
     this.logger.log('getAllTokens');
     return this.tokenService.getAllTokens();
   }
   @Get('/token/:token')
-  async getInterestsForToken(@Param() token) {
+  async getInterestsForToken(@Param() token): Promise<string[]> {
     this.logger.log('getInterestsForToken ' + JSON.stringify(token));
     return await this.tokenService.getInterestsForToken(token.token);
   }
 
   @Get('/interest')
-  async getAllTokenInterests() {
+  async getAllTokenInterests(): Promise<TokenInterest[]> {
     this.logger.log('getAllTokenInterests');
     return this.tokenService.getAllTokenInterests();
   }
   @Get('/interestamounts')
-  async getAllTokenInterestAmounts() {
+  async getAllTokenInterestAmounts(): Promise<
+    { interest: string; amount: number }[]
+  > {
     this.logger.log('getAllTokenInterestAmounts');
     return this.tokenService.getAllTokenInterestAmounts();
   }
@@ -41,7 +44,7 @@ export class TokenController {
   async getTokensForInterest(
     @Param() interest,
     @Query('notificationType') notificationType,
-  ) {
+  ): Promise<string[]> {
     this.logger.log('getTokensForInterest ' + JSON.stringify(interest));
     return await this.tokenService.getTokensForInterest(
       interest.interest,
@@ -49,18 +52,21 @@ export class TokenController {
     );
   }
   @Get('/interestamounts/:interest')
-  async getAmountForInterest(@Param() interest) {
+  async getAmountForInterest(@Param() interest): Promise<number> {
     this.logger.log('getAmountForInterest ' + JSON.stringify(interest));
     return (await this.tokenService.getTokensForInterest(interest.interest))
       .length;
   }
   @Put('/interest')
-  putRegistrationTokenForInterest(@Body() body) {
+  putRegistrationTokenForInterest(@Body() body): Promise<TokenInterest> {
     this.logger.log('putRegistrationTokenForInterest ' + JSON.stringify(body));
     return this.tokenService.saveTokenForInterest(body.token, body.interest);
   }
   @Delete('/interest/:interest/:token')
-  deleteRegistrationTokenForInterest(@Param() interest, @Param() token) {
+  deleteRegistrationTokenForInterest(
+    @Param() interest,
+    @Param() token,
+  ): Promise<number> {
     this.logger.log(
       'deleteRegistrationTokenForInterest ' +
         JSON.stringify({ interest, token }),
@@ -71,7 +77,11 @@ export class TokenController {
     );
   }
   @Post('/interest/:interest/:token')
-  markNotified(@Param() interest, @Param() token, @Body() body) {
+  markNotified(
+    @Param() interest,
+    @Param() token,
+    @Body() body,
+  ): Promise<TokenInterest> {
     this.logger.log(
       'markNotified ' + JSON.stringify({ interest, token, body }),
     );
