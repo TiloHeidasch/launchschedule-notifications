@@ -7,6 +7,7 @@ import {
   Param,
   Put,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { TokenService } from './token.service';
 
@@ -37,9 +38,15 @@ export class TokenController {
     return this.tokenService.getAllTokenInterestAmounts();
   }
   @Get('/interest/:interest')
-  async getTokensForInterest(@Param() interest) {
+  async getTokensForInterest(
+    @Param() interest,
+    @Query('notificationType') notificationType,
+  ) {
     this.logger.log('getTokensForInterest ' + JSON.stringify(interest));
-    return await this.tokenService.getTokensForInterest(interest.interest);
+    return await this.tokenService.getTokensForInterest(
+      interest.interest,
+      notificationType,
+    );
   }
   @Get('/interestamounts/:interest')
   async getAmountForInterest(@Param() interest) {
@@ -61,6 +68,17 @@ export class TokenController {
     return this.tokenService.deleteTokenForInterest(
       token.token,
       interest.interest,
+    );
+  }
+  @Post('/interest/:interest/:token')
+  markNotified(@Param() interest, @Param() token, @Body() body) {
+    this.logger.log(
+      'markNotified ' + JSON.stringify({ interest, token, body }),
+    );
+    return this.tokenService.markNotified(
+      token.token,
+      interest.interest,
+      body.notificationType,
     );
   }
 }

@@ -5,7 +5,7 @@ import { readFile, exists, writeFile } from 'fs';
 @Injectable()
 export class TokenService {
   private readonly filePath = 'data/tokenInterests.json';
-  async getAllTokenInterests(): Promise<{ token; interest }[]> {
+  async getAllTokenInterests(): Promise<any[]> {
     const file = await this.loadFile();
     return file.tokenInterests;
   }
@@ -40,11 +40,57 @@ export class TokenService {
       .map(tokenInterest => tokenInterest.interest);
     return interests;
   }
-  async getTokensForInterest(interest): Promise<{ token }[]> {
+  async getTokensForInterest(
+    interest,
+    notificationType?,
+  ): Promise<{ token }[]> {
+    console.log({ interest, notificationType });
+
     const tokenInterests = await this.getAllTokenInterests();
-    const tokens = tokenInterests
-      .filter(tokenInterest => tokenInterest.interest === interest)
-      .map(tokenInterest => tokenInterest.token);
+    const tokenInterestsWithMatchingInterest = tokenInterests.filter(
+      tokenInterest => tokenInterest.interest === interest,
+    );
+    const tokenInterestsForNotificationType = [];
+    switch (notificationType) {
+      case 'day':
+        tokenInterestsForNotificationType.push(
+          ...tokenInterestsWithMatchingInterest.filter(
+            tokenInterest => tokenInterest.lastNotification === 'week',
+          ),
+        );
+      case 'hour':
+        tokenInterestsForNotificationType.push(
+          ...tokenInterestsWithMatchingInterest.filter(
+            tokenInterest => tokenInterest.lastNotification === 'day',
+          ),
+        );
+      case 'minute':
+        tokenInterestsForNotificationType.push(
+          ...tokenInterestsWithMatchingInterest.filter(
+            tokenInterest => tokenInterest.lastNotification === 'hour',
+          ),
+        );
+      case 'week':
+        tokenInterestsForNotificationType.push(
+          ...tokenInterestsWithMatchingInterest.filter(
+            tokenInterest => tokenInterest.lastNotification === undefined,
+          ),
+        );
+        break;
+
+      default:
+        tokenInterestsForNotificationType.push(
+          ...tokenInterestsWithMatchingInterest,
+        );
+        break;
+    }
+
+    if (tokenInterestsForNotificationType.length === 0) {
+      return [];
+    }
+    const tokens = tokenInterestsForNotificationType.map(
+      tokenInterest => tokenInterest.token,
+    );
     return tokens;
   }
 
@@ -68,9 +114,35 @@ export class TokenService {
       );
     }
   }
+  async markNotified(token, interest, notificationType) {
+    const file = await this.loadFile();
+    const newTokenInterests: any[] = [];
+    file.tokenInterests.forEach(tokenInterest => {
+      if (
+        tokenInterest.token === token &&
+        tokenInterest.interest === interest
+      ) {
+        newTokenInterests.push({
+          token: tokenInterest.token,
+          interest: tokenInterest.interest,
+          lastNotification: notificationType,
+        });
+      } else {
+        newTokenInterests.push({
+          token: tokenInterest.token,
+          interest: tokenInterest.interest,
+        });
+      }
+    });
+    file.tokenInterests = newTokenInterests;
+    await promisify(writeFile)(
+      this.filePath,
+      JSON.stringify(file, undefined, 2),
+    );
+  }
   async deleteTokenForInterest(token, interest) {
     const file = await this.loadFile();
-    const newTokenInterests: { token; interest }[] = [];
+    const newTokenInterests: any[] = [];
     file.tokenInterests.forEach(tokenInterest => {
       if (
         tokenInterest.token === token &&
@@ -81,6 +153,7 @@ export class TokenService {
         newTokenInterests.push({
           token: tokenInterest.token,
           interest: tokenInterest.interest,
+          lastNotification: tokenInterest.lastNotification,
         });
       }
     });
