@@ -38,7 +38,9 @@ export class TokenService {
   }
 
   async getInterestsForToken(token) {
-    return await this.tokenInterestModel.find({ token }).exec();
+    return await (await this.tokenInterestModel.find({ token }).exec()).map(
+      tokenInterest => tokenInterest.interest,
+    );
   }
   async getTokensForInterest(
     interest,
