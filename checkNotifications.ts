@@ -37,23 +37,38 @@ function sendNotificationsForUpcomingEvents() {
 }
 function mapLaunches(launches) {
   return launches.map(launch => {
+    const relatedTypeIds = [
+      { type: 'agency', id: launch.launch_service_provider.id },
+      { type: 'location', id: launch.pad.location.id },
+      { type: 'pad', id: launch.pad.id },
+      { type: 'rocket', id: launch.rocket.configuration.id },
+    ];
     return {
       id: launch.id,
       title: launch.name,
       date: launch.net,
       image: launch.image,
       type: 'launch',
+      relatedTypeIds,
     };
   });
 }
 function mapEvents(events) {
   return events.map(event => {
+    const relatedTypeIds = [];
+    if (event.spacestations[0]) {
+      relatedTypeIds.push({
+        type: 'spacestation',
+        id: event.spacestations[0].id,
+      });
+    }
     return {
       id: event.id,
       title: event.name,
       date: event.date,
       image: event.feature_image,
       type: 'event',
+      relatedTypeIds,
     };
   });
 }
@@ -76,10 +91,31 @@ function sendNotificationsForMappedData(mappedData) {
   });
 }
 function raiseNotification(dataSet, notificationType) {
+  checkAndRaiseNotificationForTypeAndId(
+    dataSet.type,
+    dataSet.id,
+    dataSet,
+    notificationType,
+  );
+  dataSet.relatedTypeIds.forEach(relatedTypeId => {
+    checkAndRaiseNotificationForTypeAndId(
+      relatedTypeId.type,
+      relatedTypeId.id,
+      dataSet,
+      notificationType,
+    );
+  });
+}
+function checkAndRaiseNotificationForTypeAndId(
+  type,
+  id,
+  dataSet,
+  notificationType,
+) {
   const url =
     'https://launchschedule-notifications.th105.de/interest/' +
-    dataSet.type +
-    dataSet.id +
+    type +
+    id +
     '?notificationType=' +
     notificationType;
 
@@ -128,6 +164,7 @@ function raiseNotificationForToken(token, dataSet, notificationType) {
   );
 }
 function sendNotification(to, title, body, image, id, type) {
+  // console.log({ to, title, body, image, id, type });
   // create FCM data
   const data = {
     to,
@@ -157,7 +194,9 @@ function makePost(hostname, port, path, data) {
     },
   };
 
-  const req = https.request(options, res => {});
+  const req = https.request(options, res => {
+    //res.on('data', d => process.stdout.write(d));
+  });
 
   req.on('error', error => {
     console.error(error);
