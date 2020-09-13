@@ -44,11 +44,13 @@ export class TokenController {
   async getTokensForInterest(
     @Param() interest,
     @Query('notificationType') notificationType,
+    @Query('relatedInterest') relatedInterest,
   ): Promise<string[]> {
     this.logger.log('getTokensForInterest ' + JSON.stringify(interest));
     return await this.tokenService.getTokensForInterest(
       interest.interest,
       notificationType,
+      relatedInterest,
     );
   }
   @Get('/interestamounts/:interest')
@@ -89,6 +91,7 @@ export class TokenController {
       token.token,
       interest.interest,
       body.notificationType,
+      body.relatedInterest,
     );
   }
 }

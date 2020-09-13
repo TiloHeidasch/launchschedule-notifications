@@ -103,6 +103,7 @@ function raiseNotification(dataSet, notificationType) {
       relatedTypeId.id,
       dataSet,
       notificationType,
+      relatedTypeId.type + '' + relatedTypeId.id,
     );
   });
 }
@@ -111,13 +112,17 @@ function checkAndRaiseNotificationForTypeAndId(
   id,
   dataSet,
   notificationType,
+  relatedInterest?,
 ) {
-  const url =
+  let url =
     'https://launchschedule-notifications.th105.de/interest/' +
     type +
     id +
     '?notificationType=' +
     notificationType;
+  if (relatedInterest) {
+    url += '&relatedInterest=' + relatedInterest;
+  }
 
   https
     .get(url, resp => {
@@ -131,19 +136,47 @@ function checkAndRaiseNotificationForTypeAndId(
       // The whole response has been received. Print out the result.
       resp.on('end', () => {
         const tokenArray = JSON.parse(data);
-        raiseNotificationForTokenArray(tokenArray, dataSet, notificationType);
+        raiseNotificationForTokenArray(
+          type,
+          id,
+          tokenArray,
+          dataSet,
+          notificationType,
+          relatedInterest,
+        );
       });
     })
     .on('error', err => {
       console.log('Error: ' + err.message);
     });
 }
-function raiseNotificationForTokenArray(tokenArray, dataSet, notificationType) {
+function raiseNotificationForTokenArray(
+  type,
+  id,
+  tokenArray,
+  dataSet,
+  notificationType,
+  relatedInterest,
+) {
   tokenArray.forEach(token => {
-    raiseNotificationForToken(token, dataSet, notificationType);
+    raiseNotificationForToken(
+      type,
+      id,
+      token,
+      dataSet,
+      notificationType,
+      relatedInterest,
+    );
   });
 }
-function raiseNotificationForToken(token, dataSet, notificationType) {
+function raiseNotificationForToken(
+  type,
+  id,
+  token,
+  dataSet,
+  notificationType,
+  relatedInterest,
+) {
   sendNotification(
     token,
     'Upcoming ' + dataSet.type + ' in a ' + notificationType,
@@ -152,15 +185,18 @@ function raiseNotificationForToken(token, dataSet, notificationType) {
     dataSet.id,
     dataSet.type,
   );
-
+  let body;
+  if (relatedInterest) {
+    body = { notificationType, relatedInterest };
+  } else {
+    body = { notificationType };
+  }
   // update token server
   makePost(
     'launchschedule-notifications.th105.de',
     443,
-    '/interest/' + dataSet.type + dataSet.id + '/' + token,
-    JSON.stringify({
-      notificationType,
-    }),
+    '/interest/' + type + id + '/' + token,
+    JSON.stringify(body),
   );
 }
 function sendNotification(to, title, body, image, id, type) {

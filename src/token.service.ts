@@ -47,53 +47,104 @@ export class TokenService {
       tokenInterest => tokenInterest.interest,
     );
   }
-  async getTokensForInterest(interest, notificationType?): Promise<string[]> {
+  async getTokensForInterest(
+    interest,
+    notificationType = '',
+    relatedInterest?,
+  ): Promise<string[]> {
     const tokenInterests = await this.getAllTokenInterests();
     const tokenInterestsWithMatchingInterest = tokenInterests.filter(
       tokenInterest => tokenInterest.interest === interest,
     );
-    const tokenInterestsForNotificationType = [];
-    switch (notificationType) {
-      case 'day':
-        tokenInterestsForNotificationType.push(
-          ...tokenInterestsWithMatchingInterest.filter(
-            tokenInterest => tokenInterest.lastNotification === 'week',
-          ),
-        );
-      case 'hour':
-        tokenInterestsForNotificationType.push(
-          ...tokenInterestsWithMatchingInterest.filter(
-            tokenInterest => tokenInterest.lastNotification === 'day',
-          ),
-        );
-      case 'minute':
-        tokenInterestsForNotificationType.push(
-          ...tokenInterestsWithMatchingInterest.filter(
-            tokenInterest => tokenInterest.lastNotification === 'hour',
-          ),
-        );
-      case 'week':
-        tokenInterestsForNotificationType.push(
-          ...tokenInterestsWithMatchingInterest.filter(
-            tokenInterest => tokenInterest.lastNotification === undefined,
-          ),
-        );
-        break;
+    if (!relatedInterest) {
+      const tokenInterestsForNotificationType = [];
+      switch (notificationType) {
+        case 'day':
+          tokenInterestsForNotificationType.push(
+            ...tokenInterestsWithMatchingInterest.filter(
+              tokenInterest => tokenInterest.lastNotification === 'week',
+            ),
+          );
+        case 'hour':
+          tokenInterestsForNotificationType.push(
+            ...tokenInterestsWithMatchingInterest.filter(
+              tokenInterest => tokenInterest.lastNotification === 'day',
+            ),
+          );
+        case 'minute':
+          tokenInterestsForNotificationType.push(
+            ...tokenInterestsWithMatchingInterest.filter(
+              tokenInterest => tokenInterest.lastNotification === 'hour',
+            ),
+          );
+        case 'week':
+          tokenInterestsForNotificationType.push(
+            ...tokenInterestsWithMatchingInterest.filter(
+              tokenInterest => tokenInterest.lastNotification === undefined,
+            ),
+          );
+          break;
 
-      default:
-        tokenInterestsForNotificationType.push(
-          ...tokenInterestsWithMatchingInterest,
-        );
-        break;
-    }
+        default:
+          tokenInterestsForNotificationType.push(
+            ...tokenInterestsWithMatchingInterest,
+          );
+          break;
+      }
 
-    if (tokenInterestsForNotificationType.length === 0) {
-      return [];
+      if (tokenInterestsForNotificationType.length === 0) {
+        return [];
+      }
+      const tokens = tokenInterestsForNotificationType.map(
+        tokenInterest => tokenInterest.token,
+      );
+      return tokens;
+    } else {
+      const tokenInterestsForNotificationTypeAndRelatedInterest = [];
+      tokenInterestsWithMatchingInterest.forEach(tokenInterest => {
+        let isRelevant = true;
+        tokenInterest.relatedInterestsNotifications.forEach(
+          relatedInterestNotification => {
+            if (relatedInterestNotification.interest === relatedInterest) {
+              switch (notificationType) {
+                case 'minute':
+                  if (
+                    relatedInterestNotification.lastNotification === 'minute'
+                  ) {
+                    isRelevant = false;
+                  }
+                  break;
+                case 'hour':
+                  if (relatedInterestNotification.lastNotification === 'hour') {
+                    isRelevant = false;
+                  }
+                  break;
+                case 'day':
+                  if (relatedInterestNotification.lastNotification === 'day') {
+                    isRelevant = false;
+                  }
+                  break;
+
+                default:
+                  break;
+              }
+            }
+          },
+        );
+        if (isRelevant) {
+          tokenInterestsForNotificationTypeAndRelatedInterest.push(
+            tokenInterest,
+          );
+        }
+      });
+      if (tokenInterestsForNotificationTypeAndRelatedInterest.length === 0) {
+        return [];
+      }
+      const tokens = tokenInterestsForNotificationTypeAndRelatedInterest.map(
+        tokenInterest => tokenInterest.token,
+      );
+      return tokens;
     }
-    const tokens = tokenInterestsForNotificationType.map(
-      tokenInterest => tokenInterest.token,
-    );
-    return tokens;
   }
 
   async saveTokenForInterest(token, interest): Promise<TokenInterest> {
@@ -111,25 +162,57 @@ export class TokenService {
     token,
     interest,
     notificationType,
+    relatedInterest?,
   ): Promise<TokenInterest> {
-    const existingEntries = await this.tokenInterestModel
-      .find({ token, interest })
+    const existingEntry = await this.tokenInterestModel
+      .findOne({ token, interest })
       .exec();
-    if (existingEntries.length > 0) {
-      return await this.tokenInterestModel
-        .update(
-          { token, interest },
-          { token, interest, lastNotification: notificationType },
-        )
-        .exec();
+    if (existingEntry) {
+      if (!relatedInterest) {
+        return await this.tokenInterestModel
+          .update(
+            { token, interest },
+            { token, interest, lastNotification: notificationType },
+          )
+          .exec();
+      } else {
+        return await this.tokenInterestModel
+          .update(
+            { token, interest },
+            {
+              token,
+              interest,
+              relatedInterestsNotifications: [
+                ...existingEntry.relatedInterestsNotifications,
+                {
+                  interest: relatedInterest,
+                  lastNotification: notificationType,
+                },
+              ],
+            },
+          )
+          .exec();
+      }
     }
-    return await (
-      await this.tokenInterestModel.create({
-        token,
-        interest,
-        lastNotification: notificationType,
-      })
-    ).execPopulate();
+    if (!relatedInterest) {
+      return await (
+        await this.tokenInterestModel.create({
+          token,
+          interest,
+          lastNotification: notificationType,
+        })
+      ).execPopulate();
+    } else {
+      return await (
+        await this.tokenInterestModel.create({
+          token,
+          interest,
+          relatedInterestsNotifications: [
+            { interest: relatedInterest, lastNotification: notificationType },
+          ],
+        })
+      ).execPopulate();
+    }
   }
   async deleteTokenForInterest(token, interest): Promise<number> {
     return (await this.tokenInterestModel.deleteOne({ token, interest }))
