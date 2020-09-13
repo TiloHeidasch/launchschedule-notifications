@@ -128,6 +128,14 @@ export class TokenService {
                 default:
                   break;
               }
+              console.log({
+                interest,
+                notificationType,
+                relatedInterest,
+                isRelevant,
+                tokenInterest,
+                relatedInterestNotification,
+              });
             }
           },
         );
