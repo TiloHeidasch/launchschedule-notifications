@@ -49,7 +49,7 @@ export class TokenService {
   }
   async getTokensForInterest(
     interest,
-    notificationType = '',
+    notificationType?,
     relatedInterest?,
   ): Promise<string[]> {
     const tokenInterests = await this.getAllTokenInterests();

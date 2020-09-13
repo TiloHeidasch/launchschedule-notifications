@@ -46,7 +46,10 @@ export class TokenController {
     @Query('notificationType') notificationType,
     @Query('relatedInterest') relatedInterest,
   ): Promise<string[]> {
-    this.logger.log('getTokensForInterest ' + JSON.stringify(interest));
+    this.logger.log(
+      'getTokensForInterest ' +
+        JSON.stringify({ interest, notificationType, relatedInterest }),
+    );
     return await this.tokenService.getTokensForInterest(
       interest.interest,
       notificationType,
