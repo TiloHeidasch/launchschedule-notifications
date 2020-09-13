@@ -96,6 +96,7 @@ function raiseNotification(dataSet, notificationType) {
     dataSet.id,
     dataSet,
     notificationType,
+    undefined,
   );
   dataSet.relatedTypeIds.forEach(relatedTypeId => {
     checkAndRaiseNotificationForTypeAndId(
@@ -112,7 +113,7 @@ function checkAndRaiseNotificationForTypeAndId(
   id,
   dataSet,
   notificationType,
-  relatedInterest?,
+  relatedInterest,
 ) {
   let url =
     'https://launchschedule-notifications.th105.de/interest/' +
