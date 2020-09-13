@@ -124,18 +124,25 @@ export class TokenService {
                     isRelevant = false;
                   }
                   break;
+                case 'week':
+                  if (relatedInterestNotification.lastNotification === 'week') {
+                    isRelevant = false;
+                  }
+                  break;
 
                 default:
                   break;
               }
-              console.log({
-                interest,
-                notificationType,
-                relatedInterest,
-                isRelevant,
-                tokenInterest,
-                relatedInterestNotification,
-              });
+              console.log(
+                JSON.stringify({
+                  interest,
+                  notificationType,
+                  relatedInterest,
+                  isRelevant,
+                  tokenInterest,
+                  relatedInterestNotification,
+                }),
+              );
             }
           },
         );
