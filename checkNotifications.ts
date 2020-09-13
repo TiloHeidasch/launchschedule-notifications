@@ -104,7 +104,7 @@ function raiseNotification(dataSet, notificationType) {
       relatedTypeId.id,
       dataSet,
       notificationType,
-      relatedTypeId.type + '' + relatedTypeId.id,
+      dataSet.type + '' + dataSet.id,
     );
   });
 }
