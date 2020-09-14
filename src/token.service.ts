@@ -59,10 +59,10 @@ export class TokenService {
     if (!relatedInterest) {
       const tokenInterestsForNotificationType = [];
       switch (notificationType) {
-        case 'day':
+        case 'minute':
           tokenInterestsForNotificationType.push(
             ...tokenInterestsWithMatchingInterest.filter(
-              tokenInterest => tokenInterest.lastNotification === 'week',
+              tokenInterest => tokenInterest.lastNotification === 'hour',
             ),
           );
         case 'hour':
@@ -71,10 +71,10 @@ export class TokenService {
               tokenInterest => tokenInterest.lastNotification === 'day',
             ),
           );
-        case 'minute':
+        case 'day':
           tokenInterestsForNotificationType.push(
             ...tokenInterestsWithMatchingInterest.filter(
-              tokenInterest => tokenInterest.lastNotification === 'hour',
+              tokenInterest => tokenInterest.lastNotification === 'week',
             ),
           );
         case 'week':
