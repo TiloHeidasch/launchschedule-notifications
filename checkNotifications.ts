@@ -173,7 +173,6 @@ function raiseNotificationForToken(token, dataSet, notificationType) {
   );
 }
 function sendNotification(to, title, body, image, id, type) {
-  // console.log({ to, title, body, image, id, type });
   // create FCM data
   const data = {
     to,
@@ -191,8 +190,6 @@ function sendNotification(to, title, body, image, id, type) {
   makePost('https://fcm.googleapis.com/fcm/send', JSON.stringify(data));
 }
 async function makePost(url, data) {
-  console.log(url);
-
   try {
     const response = await axios.post(url, data, {
       headers: {
