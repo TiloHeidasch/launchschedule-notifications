@@ -44,15 +44,17 @@ export class TokenController {
   async getTokensForInterest(
     @Param() interest,
     @Query('notificationType') notificationType,
+    @Query('date') date,
     @Query('relatedInterest') relatedInterest,
   ): Promise<string[]> {
     this.logger.log(
       'getTokensForInterest ' +
-        JSON.stringify({ interest, notificationType, relatedInterest }),
+        JSON.stringify({ interest, notificationType, date, relatedInterest }),
     );
     return await this.tokenService.getTokensForInterest(
       interest.interest,
       notificationType,
+      date,
       relatedInterest,
     );
   }
@@ -82,18 +84,13 @@ export class TokenController {
     );
   }
   @Post('/interest/:interest/:token')
-  markNotified(
-    @Param() interest,
-    @Param() token,
-    @Body() body,
-  ): Promise<TokenInterest> {
-    this.logger.log(
-      'markNotified ' + JSON.stringify({ interest, token, body }),
-    );
+  markNotified(@Param() param, @Body() body): Promise<TokenInterest> {
+    this.logger.log('markNotified ' + JSON.stringify({ param, body }));
     return this.tokenService.markNotified(
-      token.token,
-      interest.interest,
+      param.token,
+      param.interest,
       body.notificationType,
+      body.date,
       body.relatedInterest,
     );
   }

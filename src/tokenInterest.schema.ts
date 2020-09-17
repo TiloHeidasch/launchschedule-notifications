@@ -13,9 +13,13 @@ export class TokenInterest extends Document {
   lastNotification?: string;
 
   @Prop()
+  targetDate?: string;
+
+  @Prop()
   relatedInterestsNotifications?: {
     interest: string;
     lastNotification: string;
+    targetDate: string;
   }[] = [];
 }
 

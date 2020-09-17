@@ -50,6 +50,7 @@ export class TokenService {
   async getTokensForInterest(
     interest,
     notificationType?,
+    date?,
     relatedInterest?,
   ): Promise<string[]> {
     const tokenInterests = await this.getAllTokenInterests();
@@ -62,25 +63,33 @@ export class TokenService {
         case 'minute':
           tokenInterestsForNotificationType.push(
             ...tokenInterestsWithMatchingInterest.filter(
-              tokenInterest => tokenInterest.lastNotification === 'hour',
+              tokenInterest =>
+                tokenInterest.lastNotification === 'hour' &&
+                tokenInterest.targetDate === date,
             ),
           );
         case 'hour':
           tokenInterestsForNotificationType.push(
             ...tokenInterestsWithMatchingInterest.filter(
-              tokenInterest => tokenInterest.lastNotification === 'day',
+              tokenInterest =>
+                tokenInterest.lastNotification === 'day' &&
+                tokenInterest.targetDate === date,
             ),
           );
         case 'day':
           tokenInterestsForNotificationType.push(
             ...tokenInterestsWithMatchingInterest.filter(
-              tokenInterest => tokenInterest.lastNotification === 'week',
+              tokenInterest =>
+                tokenInterest.lastNotification === 'week' &&
+                tokenInterest.targetDate === date,
             ),
           );
         case 'week':
           tokenInterestsForNotificationType.push(
             ...tokenInterestsWithMatchingInterest.filter(
-              tokenInterest => tokenInterest.lastNotification === undefined,
+              tokenInterest =>
+                tokenInterest.lastNotification === undefined ||
+                tokenInterest.targetDate !== date,
             ),
           );
           break;
@@ -177,6 +186,7 @@ export class TokenService {
     token,
     interest,
     notificationType,
+    date,
     relatedInterest?,
   ): Promise<TokenInterest> {
     const existingEntry = await this.tokenInterestModel
@@ -187,7 +197,12 @@ export class TokenService {
         return await this.tokenInterestModel
           .update(
             { token, interest },
-            { token, interest, lastNotification: notificationType },
+            {
+              token,
+              interest,
+              lastNotification: notificationType,
+              targetDate: date,
+            },
           )
           .exec();
       } else {
@@ -202,31 +217,13 @@ export class TokenService {
                 {
                   interest: relatedInterest,
                   lastNotification: notificationType,
+                  targetDate: date,
                 },
               ],
             },
           )
           .exec();
       }
-    }
-    if (!relatedInterest) {
-      return await (
-        await this.tokenInterestModel.create({
-          token,
-          interest,
-          lastNotification: notificationType,
-        })
-      ).execPopulate();
-    } else {
-      return await (
-        await this.tokenInterestModel.create({
-          token,
-          interest,
-          relatedInterestsNotifications: [
-            { interest: relatedInterest, lastNotification: notificationType },
-          ],
-        })
-      ).execPopulate();
     }
   }
   async deleteTokenForInterest(token, interest): Promise<number> {

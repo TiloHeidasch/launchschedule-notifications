@@ -1,39 +1,27 @@
-var https = require('https');
+const axios = require('axios');
 
-function requestUrl(url, mappingCallBack, actionCallBack) {
-  https
-    .get(url, resp => {
-      let data = '';
-
-      // A chunk of data has been recieved.
-      resp.on('data', chunk => {
-        data += chunk;
-      });
-
-      // The whole response has been received. Print out the result.
-      resp.on('end', () => {
-        const recieved = JSON.parse(data);
-        const mapped = mappingCallBack(recieved.results);
-        actionCallBack(mapped);
-      });
-    })
-    .on('error', err => {
-      console.log('Error: ' + err.message);
-    });
+async function requestFromLl(url) {
+  try {
+    const response = await axios.get(url);
+    return response.data.results;
+  } catch (error) {
+    console.log(error.response.body);
+  }
 }
-function sendNotificationsForUpcomingLaunches() {
-  requestUrl(
+
+async function sendNotificationsForUpcomingLaunches() {
+  const launches = await requestFromLl(
     'https://ll.thespacedevs.com/2.0.0/launch/upcoming/?format=json&limit=10',
-    mapLaunches,
-    sendNotificationsForMappedData,
   );
+  const mappedLaunches = mapLaunches(launches);
+  sendNotificationsForMappedData(mappedLaunches);
 }
-function sendNotificationsForUpcomingEvents() {
-  requestUrl(
+async function sendNotificationsForUpcomingEvents() {
+  const events = await requestFromLl(
     'https://ll.thespacedevs.com/2.0.0/event/upcoming/?format=json&limit=10',
-    mapEvents,
-    sendNotificationsForMappedData,
   );
+  const mappedEvents = mapEvents(events);
+  sendNotificationsForMappedData(mappedEvents);
 }
 function mapLaunches(launches) {
   return launches.map(launch => {
@@ -90,94 +78,91 @@ function sendNotificationsForMappedData(mappedData) {
     }
   });
 }
-function raiseNotification(dataSet, notificationType) {
-  checkAndRaiseNotificationForTypeAndId(
-    dataSet.type,
-    dataSet.id,
-    dataSet,
-    notificationType,
-    undefined,
-  );
-  dataSet.relatedTypeIds.forEach(relatedTypeId => {
-    checkAndRaiseNotificationForTypeAndId(
-      relatedTypeId.type,
-      relatedTypeId.id,
-      dataSet,
+async function raiseNotification(dataSet, notificationType) {
+  const tokens = [];
+  tokens.push(
+    ...(await getTokens(
+      dataSet.type,
+      dataSet.id,
       notificationType,
-      dataSet.type + '' + dataSet.id,
+      dataSet.date,
+      undefined,
+    )),
+  );
+  for (let index = 0; index < dataSet.relatedTypeIds.length; index++) {
+    const relatedTypeId = dataSet.relatedTypeIds[index];
+    tokens.push(
+      ...(await getTokens(
+        relatedTypeId.type,
+        relatedTypeId.id,
+        notificationType,
+        dataSet.date,
+        dataSet.type + '' + dataSet.id,
+      )),
+    );
+  }
+  const uniqueTokens = tokens.filter((value, index, self) => {
+    return self.indexOf(value) === index;
+  });
+  if (uniqueTokens.length > 0) {
+    raiseNotificationForTokenArray(uniqueTokens, dataSet, notificationType);
+    markNotified(dataSet, notificationType, uniqueTokens);
+  }
+}
+function markNotified(dataSet, notificationType, tokenArray) {
+  tokenArray.forEach(token => {
+    dataSet.relatedTypeIds.forEach(relatedTypeId => {
+      // update token server
+      makePost(
+        'https://launchschedule-notifications.th105.de/interest/' +
+          relatedTypeId.type +
+          relatedTypeId.id +
+          '/' +
+          token,
+        {
+          notificationType,
+          date: dataSet.date,
+          relatedInterest: dataSet.type + '' + dataSet.id,
+        },
+      );
+    });
+    // update token server
+    makePost(
+      'https://launchschedule-notifications.th105.de/interest/' +
+        dataSet.type +
+        dataSet.id +
+        '/' +
+        token,
+      {
+        notificationType,
+        date: dataSet.date,
+      },
     );
   });
 }
-function checkAndRaiseNotificationForTypeAndId(
-  type,
-  id,
-  dataSet,
-  notificationType,
-  relatedInterest,
-) {
+
+async function getTokens(type, id, notificationType, date, relatedInterest) {
   let url =
     'https://launchschedule-notifications.th105.de/interest/' +
     type +
     id +
     '?notificationType=' +
-    notificationType;
+    notificationType +
+    '&date=' +
+    date;
   if (relatedInterest) {
     url += '&relatedInterest=' + relatedInterest;
   }
-
-  https
-    .get(url, resp => {
-      let data = '';
-
-      // A chunk of data has been recieved.
-      resp.on('data', chunk => {
-        data += chunk;
-      });
-
-      // The whole response has been received. Print out the result.
-      resp.on('end', () => {
-        const tokenArray = JSON.parse(data);
-        raiseNotificationForTokenArray(
-          type,
-          id,
-          tokenArray,
-          dataSet,
-          notificationType,
-          relatedInterest,
-        );
-      });
-    })
-    .on('error', err => {
-      console.log('Error: ' + err.message);
-    });
+  const response = await axios.get(url);
+  return response.data;
 }
-function raiseNotificationForTokenArray(
-  type,
-  id,
-  tokenArray,
-  dataSet,
-  notificationType,
-  relatedInterest,
-) {
+
+function raiseNotificationForTokenArray(tokenArray, dataSet, notificationType) {
   tokenArray.forEach(token => {
-    raiseNotificationForToken(
-      type,
-      id,
-      token,
-      dataSet,
-      notificationType,
-      relatedInterest,
-    );
+    raiseNotificationForToken(token, dataSet, notificationType);
   });
 }
-function raiseNotificationForToken(
-  type,
-  id,
-  token,
-  dataSet,
-  notificationType,
-  relatedInterest,
-) {
+function raiseNotificationForToken(token, dataSet, notificationType) {
   sendNotification(
     token,
     'Upcoming ' + dataSet.type + ' in a ' + notificationType,
@@ -185,19 +170,6 @@ function raiseNotificationForToken(
     dataSet.image,
     dataSet.id,
     dataSet.type,
-  );
-  let body;
-  if (relatedInterest) {
-    body = { notificationType, relatedInterest };
-  } else {
-    body = { notificationType };
-  }
-  // update token server
-  makePost(
-    'launchschedule-notifications.th105.de',
-    443,
-    '/interest/' + type + id + '/' + token,
-    JSON.stringify(body),
   );
 }
 function sendNotification(to, title, body, image, id, type) {
@@ -216,31 +188,22 @@ function sendNotification(to, title, body, image, id, type) {
     },
   };
   // send to FCM
-  makePost('fcm.googleapis.com', 443, '/fcm/send', JSON.stringify(data));
+  makePost('https://fcm.googleapis.com/fcm/send', JSON.stringify(data));
 }
-function makePost(hostname, port, path, data) {
-  const options = {
-    hostname,
-    port,
-    path,
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Content-Length': data.length,
-      Authorization: 'key=' + process.env.FCM_TOKEN,
-    },
-  };
+async function makePost(url, data) {
+  console.log(url);
 
-  const req = https.request(options, res => {
-    //res.on('data', d => process.stdout.write(d));
-  });
-
-  req.on('error', error => {
-    console.error(error);
-  });
-
-  req.write(data);
-  req.end();
+  try {
+    const response = await axios.post(url, data, {
+      headers: {
+        'Content-Type': 'application/json',
+        //'Content-Length': data.length,
+        Authorization: 'key=' + process.env.FCM_TOKEN,
+      },
+    });
+  } catch (error) {
+    console.log(error.response);
+  }
 }
 sendNotificationsForUpcomingLaunches();
 sendNotificationsForUpcomingEvents();
