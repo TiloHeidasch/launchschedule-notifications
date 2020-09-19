@@ -129,7 +129,7 @@ function markNotified(dataSet, notificationType, tokenArray) {
     dataSet.relatedTypeIds.forEach(relatedTypeId => {
       // update token server
       put(
-        'http://localhost:3000/notification/' +
+        'https://launchschedule-notifications.th105.de/notification/' +
           '?type=' +
           relatedTypeId.type +
           '&id=' +
@@ -148,7 +148,7 @@ function markNotified(dataSet, notificationType, tokenArray) {
     });
     // update token server
     put(
-      'http://localhost:3000/notification/' +
+      'https://launchschedule-notifications.th105.de/notification/' +
         '?type=' +
         dataSet.type +
         '&id=' +
@@ -172,7 +172,7 @@ async function getTokens(
   relatedInterestId,
 ) {
   let url =
-    'http://localhost:3000/notification' + '?type=' + type + '&id=' + id;
+    'https://launchschedule-notifications.th105.de/notification' + '?type=' + type + '&id=' + id;
   const response = await axios.get(url);
   const notifications = response.data;
   const tokens = [];
