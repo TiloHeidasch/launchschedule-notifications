@@ -5,7 +5,7 @@ async function requestFromLl(url) {
     const response = await axios.get(url);
     return response.data.results;
   } catch (error) {
-    console.log(error.response.body);
+    console.log(error.body);
   }
 }
 
@@ -25,12 +25,25 @@ async function sendNotificationsForUpcomingEvents() {
 }
 function mapLaunches(launches) {
   return launches.map(launch => {
-    const relatedTypeIds = [
-      { type: 'agency', id: launch.launch_service_provider.id },
-      { type: 'location', id: launch.pad.location.id },
-      { type: 'pad', id: launch.pad.id },
-      { type: 'rocket', id: launch.rocket.configuration.id },
-    ];
+    const relatedTypeIds = [];
+    if (launch.launch_service_provider) {
+      relatedTypeIds.push({
+        type: 'agency',
+        id: launch.launch_service_provider.id,
+      });
+    }
+    if (launch.pad && launch.pad.location) {
+      relatedTypeIds.push({ type: 'location', id: launch.pad.location.id });
+    }
+    if (launch.pad) {
+      relatedTypeIds.push({ type: 'pad', id: launch.pad.id });
+    }
+    if (launch.rocket && launch.rocket.configuration) {
+      relatedTypeIds.push({
+        type: 'rocket',
+        id: launch.rocket.configuration.id,
+      });
+    }
     return {
       id: launch.id,
       title: launch.name,
@@ -87,6 +100,7 @@ async function raiseNotification(dataSet, notificationType) {
       notificationType,
       dataSet.date,
       undefined,
+      undefined,
     )),
   );
   for (let index = 0; index < dataSet.relatedTypeIds.length; index++) {
@@ -97,7 +111,8 @@ async function raiseNotification(dataSet, notificationType) {
         relatedTypeId.id,
         notificationType,
         dataSet.date,
-        dataSet.type + '' + dataSet.id,
+        dataSet.type,
+        dataSet.id,
       )),
     );
   }
@@ -113,48 +128,70 @@ function markNotified(dataSet, notificationType, tokenArray) {
   tokenArray.forEach(token => {
     dataSet.relatedTypeIds.forEach(relatedTypeId => {
       // update token server
-      makePost(
-        'https://launchschedule-notifications.th105.de/interest/' +
+      put(
+        'http://localhost:3000/notification/' +
+          '?type=' +
           relatedTypeId.type +
+          '&id=' +
           relatedTypeId.id +
-          '/' +
-          token,
-        {
-          notificationType,
-          date: dataSet.date,
-          relatedInterest: dataSet.type + '' + dataSet.id,
-        },
+          '&token=' +
+          token +
+          '&period=' +
+          notificationType +
+          '&date=' +
+          dataSet.date +
+          '&relatedType=' +
+          dataSet.type +
+          '&relatedId=' +
+          dataSet.id,
       );
     });
     // update token server
-    makePost(
-      'https://launchschedule-notifications.th105.de/interest/' +
+    put(
+      'http://localhost:3000/notification/' +
+        '?type=' +
         dataSet.type +
+        '&id=' +
         dataSet.id +
-        '/' +
-        token,
-      {
-        notificationType,
-        date: dataSet.date,
-      },
+        '&token=' +
+        token +
+        '&period=' +
+        notificationType +
+        '&date=' +
+        dataSet.date,
     );
   });
 }
 
-async function getTokens(type, id, notificationType, date, relatedInterest) {
+async function getTokens(
+  type,
+  id,
+  notificationType,
+  date,
+  relatedInterestType,
+  relatedInterestId,
+) {
   let url =
-    'https://launchschedule-notifications.th105.de/interest/' +
-    type +
-    id +
-    '?notificationType=' +
-    notificationType +
-    '&date=' +
-    date;
-  if (relatedInterest) {
-    url += '&relatedInterest=' + relatedInterest;
-  }
+    'http://localhost:3000/notification' + '?type=' + type + '&id=' + id;
   const response = await axios.get(url);
-  return response.data;
+  const notifications = response.data;
+  const tokens = [];
+  notifications.forEach(notification => {
+    let relevant = isRelevant(
+      notification,
+      type,
+      id,
+      notificationType,
+      date,
+      relatedInterestType,
+      relatedInterestId,
+    );
+    if (relevant) {
+      tokens.push(notification.token);
+    }
+  });
+
+  return tokens;
 }
 
 function raiseNotificationForTokenArray(tokenArray, dataSet, notificationType) {
@@ -165,7 +202,7 @@ function raiseNotificationForTokenArray(tokenArray, dataSet, notificationType) {
 function raiseNotificationForToken(token, dataSet, notificationType) {
   sendNotification(
     token,
-    'Upcoming ' + dataSet.type + ' in a ' + notificationType,
+    'Upcoming ' + dataSet.type + ' in less than a ' + notificationType,
     dataSet.title,
     dataSet.image,
     dataSet.id,
@@ -199,8 +236,85 @@ async function makePost(url, data) {
       },
     });
   } catch (error) {
-    console.log(error.response);
+    console.error(error.response.data);
   }
+}
+async function put(url) {
+  try {
+    const response = await axios.put(url);
+  } catch (error) {
+    console.error(error.response.data);
+  }
+}
+function isRelevant(
+  notification,
+  type,
+  id,
+  notificationType,
+  date,
+  relatedInterestType,
+  relatedInterestId,
+) {
+  let relevant = true;
+  notification.notified.forEach(notifiedElement => {
+    if (
+      notifiedElement.date === date &&
+      (!relatedInterestType || !relatedInterestId)
+    ) {
+      switch (notificationType) {
+        case 'week':
+          if (notifiedElement.period === 'week') {
+            relevant = false;
+          }
+        case 'day':
+          if (notifiedElement.period === 'day') {
+            relevant = false;
+          }
+        case 'hour':
+          if (notifiedElement.period === 'hour') {
+            relevant = false;
+          }
+        case 'minute':
+          if (notifiedElement.period === 'minute') {
+            relevant = false;
+          }
+          break;
+        default:
+          break;
+      }
+    }
+    if (
+      notifiedElement.date === date &&
+      relatedInterestType &&
+      relatedInterestId &&
+      notifiedElement.relatedInterest &&
+      notifiedElement.relatedInterest.id === relatedInterestId &&
+      notifiedElement.relatedInterest.type === relatedInterestType
+    ) {
+      switch (notificationType) {
+        case 'week':
+          if (notifiedElement.period === 'week') {
+            relevant = false;
+          }
+        case 'day':
+          if (notifiedElement.period === 'day') {
+            relevant = false;
+          }
+        case 'hour':
+          if (notifiedElement.period === 'hour') {
+            relevant = false;
+          }
+        case 'minute':
+          if (notifiedElement.period === 'minute') {
+            relevant = false;
+          }
+          break;
+        default:
+          break;
+      }
+    }
+  });
+  return relevant;
 }
 sendNotificationsForUpcomingLaunches();
 sendNotificationsForUpcomingEvents();
