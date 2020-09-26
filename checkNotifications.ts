@@ -29,23 +29,26 @@ function mapLaunches(launches) {
     if (launch.launch_service_provider) {
       relatedTypeIds.push({
         type: 'agency',
-        id: launch.launch_service_provider.id,
+        id: launch.launch_service_provider.id + '',
       });
     }
     if (launch.pad && launch.pad.location) {
-      relatedTypeIds.push({ type: 'location', id: launch.pad.location.id });
+      relatedTypeIds.push({
+        type: 'location',
+        id: launch.pad.location.id + '',
+      });
     }
     if (launch.pad) {
-      relatedTypeIds.push({ type: 'pad', id: launch.pad.id });
+      relatedTypeIds.push({ type: 'pad', id: launch.pad.id + '' });
     }
     if (launch.rocket && launch.rocket.configuration) {
       relatedTypeIds.push({
         type: 'rocket',
-        id: launch.rocket.configuration.id,
+        id: launch.rocket.configuration.id + '',
       });
     }
     return {
-      id: launch.id,
+      id: launch.id + '',
       title: launch.name,
       date: launch.net,
       image: launch.image,
@@ -60,11 +63,11 @@ function mapEvents(events) {
     if (event.spacestations[0]) {
       relatedTypeIds.push({
         type: 'spacestation',
-        id: event.spacestations[0].id,
+        id: event.spacestations[0].id + '',
       });
     }
     return {
-      id: event.id,
+      id: event.id + '',
       title: event.name,
       date: event.date,
       image: event.feature_image,
@@ -172,7 +175,11 @@ async function getTokens(
   relatedInterestId,
 ) {
   let url =
-    'https://launchschedule-notifications.th105.de/notification' + '?type=' + type + '&id=' + id;
+    'https://launchschedule-notifications.th105.de/notification' +
+    '?type=' +
+    type +
+    '&id=' +
+    id;
   const response = await axios.get(url);
   const notifications = response.data;
   const tokens = [];
