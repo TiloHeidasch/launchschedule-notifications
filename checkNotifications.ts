@@ -11,14 +11,14 @@ async function requestFromLl(url) {
 
 async function sendNotificationsForUpcomingLaunches() {
   const launches = await requestFromLl(
-    'https://ll.thespacedevs.com/2.0.0/launch/upcoming/?format=json&limit=10',
+    'https://ll.thespacedevs.com/2.1.0/launch/upcoming/?format=json&limit=10',
   );
   const mappedLaunches = mapLaunches(launches);
   sendNotificationsForMappedData(mappedLaunches);
 }
 async function sendNotificationsForUpcomingEvents() {
   const events = await requestFromLl(
-    'https://ll.thespacedevs.com/2.0.0/event/upcoming/?format=json&limit=10',
+    'https://ll.thespacedevs.com/2.1.0/event/upcoming/?format=json&limit=10',
   );
   const mappedEvents = mapEvents(events);
   sendNotificationsForMappedData(mappedEvents);
@@ -52,6 +52,7 @@ function mapLaunches(launches) {
       title: launch.name,
       date: launch.net,
       image: launch.image,
+      status: launch.status.id,
       type: 'launch',
       relatedTypeIds,
     };
@@ -71,6 +72,7 @@ function mapEvents(events) {
       title: event.name,
       date: event.date,
       image: event.feature_image,
+      status: -1,
       type: 'event',
       relatedTypeIds,
     };
@@ -78,21 +80,36 @@ function mapEvents(events) {
 }
 function sendNotificationsForMappedData(mappedData) {
   mappedData.forEach(dataSet => {
-    const timeDiff = new Date(dataSet.date).valueOf() - new Date().valueOf();
-    const secondDiff = timeDiff / 1000;
-    const minuteDiff = secondDiff / 60;
-    const hourDiff = minuteDiff / 60;
-    const dayDiff = hourDiff / 24;
-    if (minuteDiff < 5) {
-      raiseNotification(dataSet, 'minute');
-    } else if (hourDiff < 1) {
-      raiseNotification(dataSet, 'hour');
-    } else if (dayDiff < 1) {
-      raiseNotification(dataSet, 'day');
-    } else if (dayDiff < 7) {
-      raiseNotification(dataSet, 'week');
+    if (isStatusOkToSend(dataSet.status)) {
+      const timeDiff = new Date(dataSet.date).valueOf() - new Date().valueOf();
+      const secondDiff = timeDiff / 1000;
+      const minuteDiff = secondDiff / 60;
+      const hourDiff = minuteDiff / 60;
+      const dayDiff = hourDiff / 24;
+      if (minuteDiff < 5) {
+        raiseNotification(dataSet, 'minute');
+      } else if (hourDiff < 1) {
+        raiseNotification(dataSet, 'hour');
+      } else if (dayDiff < 1) {
+        raiseNotification(dataSet, 'day');
+      } else if (dayDiff < 7) {
+        raiseNotification(dataSet, 'week');
+      }
     }
   });
+}
+function isStatusOkToSend(status) {
+  switch (status) {
+    case 1: // Go for Launch
+    case 3: // Launch Successful
+    case 4: // Launch Failure
+    case 5: // On hold
+    case 6: // Launch in Flight
+    case 7: // Launch was a partial failure
+      return true;
+    default:
+      return false;
+  }
 }
 async function raiseNotification(dataSet, notificationType) {
   const tokens = [];
