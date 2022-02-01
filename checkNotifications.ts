@@ -13,7 +13,7 @@ async function requestFromLl(url) {
 async function sendNotificationsForUpcomingLaunches() {
   console.log({ function: "sendNotificationsForUpcomingLaunches" });
   const launches = await requestFromLl(
-    "https://lldev.thespacedevs.com/2.2.0/launch/upcoming/?format=json&limit=10"
+    "https://ll.thespacedevs.com/2.2.0/launch/upcoming/?format=json&limit=10"
   );
   const mappedLaunches = mapLaunches(launches);
   sendNotificationsForMappedData(mappedLaunches);
@@ -21,7 +21,7 @@ async function sendNotificationsForUpcomingLaunches() {
 async function sendNotificationsForUpcomingEvents() {
   console.log({ function: "sendNotificationsForUpcomingEvents" });
   const events = await requestFromLl(
-    "https://lldev.thespacedevs.com/2.2.0/event/upcoming/?format=json&limit=10"
+    "https://ll.thespacedevs.com/2.2.0/event/upcoming/?format=json&limit=10"
   );
   const mappedEvents = mapEvents(events);
   sendNotificationsForMappedData(mappedEvents);
