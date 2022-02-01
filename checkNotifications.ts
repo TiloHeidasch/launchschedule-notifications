@@ -90,7 +90,7 @@ function sendNotificationsForMappedData(mappedData) {
       const timeDiff = new Date(dataSet.date).valueOf() - new Date().valueOf();
       const secondDiff = timeDiff / 1000;
       const minuteDiff = secondDiff / 60;
-      if (minuteDiff <= 15) {
+      if (minuteDiff <= 15 && minuteDiff >= -5) {
         raiseNotification(dataSet);
       }
     }
@@ -169,9 +169,7 @@ async function makePost(url, data) {
       headers: {
         "Content-Type": "application/json",
         //'Content-Length': data.length,
-        //Authorization: "key=" + process.env.FCM_TOKEN,
-        Authorization:
-          "key=AAAAkONouqA:APA91bE3-2SHlQFyYrKN7HbDOv2WAC9glZlbv0J-AnJ0P-8xWtHE0rI8ElWh7XUtCQjvDubf37GhP0iVyNOKEEYX-GO43dwnPzor50o3Onjz8YyRxi7r009YDxJeY1V2H-FkQ4ovs15m",
+        Authorization: "key=" + process.env.FCM_TOKEN,
       },
     });
   } catch (error) {
