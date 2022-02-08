@@ -177,4 +177,4 @@ async function makePost(url, data) {
   }
 }
 sendNotificationsForUpcomingLaunches();
-// sendNotificationsForUpcomingEvents();
+sendNotificationsForUpcomingEvents();
