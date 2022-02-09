@@ -18,3 +18,11 @@ jobs:
         run: node checkNotifications.ts
         env:
           FCM_TOKEN: ${{secrets.FCM_TOKEN}}
+      - name: Push to Master branch
+        uses: crazy-max/ghaction-github-pages@v2.3.0
+        with:
+          build_dir: ./
+          target_branch: master
+          commit_message: 'Updates Raised Notifications'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

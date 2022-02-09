@@ -1,33 +1,34 @@
 const axios = require("axios");
+const fs = require("fs");
+const raisedLaunchesFileName = "raisedLaunches.json";
+const raisedEventsFileName = "raisedEvents.json";
 
 async function requestFromLl(url) {
-  console.log({ function: "requestFromLl", url });
   try {
     const response = await axios.get(url);
     return response.data.results;
   } catch (error) {
-    console.log(error.body);
+    console.error(error.body);
   }
 }
 
-async function sendNotificationsForUpcomingLaunches() {
-  console.log({ function: "sendNotificationsForUpcomingLaunches" });
+async function sendNotificationsForUpcomingLaunches(err, raisedLaunches) {
+  raisedLaunches = JSON.parse(raisedLaunches);
   const launches = await requestFromLl(
     "https://ll.thespacedevs.com/2.2.0/launch/upcoming/?format=json&limit=3"
   );
   const mappedLaunches = mapLaunches(launches);
-  sendNotificationsForMappedData(mappedLaunches);
+  sendNotificationsForMappedData(mappedLaunches, raisedLaunches, true);
 }
-async function sendNotificationsForUpcomingEvents() {
-  console.log({ function: "sendNotificationsForUpcomingEvents" });
+async function sendNotificationsForUpcomingEvents(err, raisedEvents) {
+  raisedEvents = JSON.parse(raisedEvents);
   const events = await requestFromLl(
     "https://ll.thespacedevs.com/2.2.0/event/upcoming/?format=json&limit=3"
   );
   const mappedEvents = mapEvents(events);
-  sendNotificationsForMappedData(mappedEvents);
+  sendNotificationsForMappedData(mappedEvents, raisedEvents, false);
 }
 function mapLaunches(launches) {
-  console.log({ function: "mapLaunches", launches });
   return launches.map((launch) => {
     const relatedTypeIds = [];
     if (launch.launch_service_provider) {
@@ -63,7 +64,6 @@ function mapLaunches(launches) {
   });
 }
 function mapEvents(events) {
-  console.log({ function: "mapEvents", events });
   return events.map((event) => {
     const relatedTypeIds = [];
     if (event.spacestations[0]) {
@@ -83,18 +83,38 @@ function mapEvents(events) {
     };
   });
 }
-function sendNotificationsForMappedData(mappedData) {
-  console.log({ function: "sendNotificationsForMappedData", mappedData });
-  mappedData.forEach((dataSet) => {
-    if (isStatusOkToSend(dataSet.status) || dataSet.type === "event") {
+function sendNotificationsForMappedData(
+  mappedData,
+  raisedNotifications,
+  launches
+) {
+  let change = false;
+  for (let index = 0; index < mappedData.length; index++) {
+    const dataSet = mappedData[index];
+    if (
+      (isStatusOkToSend(dataSet.status) || dataSet.type === "event") &&
+      !isDataSetIn(dataSet, raisedNotifications)
+    ) {
       const timeDiff = new Date(dataSet.date).valueOf() - new Date().valueOf();
       const secondDiff = timeDiff / 1000;
       const minuteDiff = secondDiff / 60;
-      if (minuteDiff <= 15 && minuteDiff >= -5) {
+      if (minuteDiff <= 15 && minuteDiff >= 0) {
+        raisedNotifications.push(dataSet);
         raiseNotification(dataSet);
+        change = true;
       }
     }
-  });
+  }
+  if (change) {
+    raisedNotifications = raisedNotifications.filter(
+      (raisedNotification, index, array) => {
+        const timeDiff =
+          new Date(raisedNotification.date).valueOf() - new Date().valueOf();
+        return timeDiff > 0;
+      }
+    );
+    saveRaisedNotifications(raisedNotifications, launches);
+  }
 }
 function isStatusOkToSend(status) {
   switch (status) {
@@ -110,7 +130,6 @@ function isStatusOkToSend(status) {
   }
 }
 async function raiseNotification(dataSet) {
-  console.log({ function: "raiseNotification", dataSet });
   let condition = "'" + dataSet.type + dataSet.id + "' in topics";
   dataSet.relatedTypeIds.forEach((relatedTypeId) => {
     condition =
@@ -136,15 +155,6 @@ async function raiseNotification(dataSet) {
 }
 
 function sendNotification(condition, body, title, image, id, type) {
-  console.log({
-    function: "sendNotification",
-    condition,
-    title,
-    body,
-    image,
-    id,
-    type,
-  });
   // create FCM data
   const data = {
     condition,
@@ -162,8 +172,6 @@ function sendNotification(condition, body, title, image, id, type) {
   makePost("https://fcm.googleapis.com/fcm/send", JSON.stringify(data));
 }
 async function makePost(url, data) {
-  console.log({ function: "makePost", url, data });
-
   try {
     const response = await axios.post(url, data, {
       headers: {
@@ -176,5 +184,41 @@ async function makePost(url, data) {
     console.error(error.response.data);
   }
 }
-sendNotificationsForUpcomingLaunches();
-sendNotificationsForUpcomingEvents();
+
+function readRaisedNotifications(launches, callback) {
+  fs.readFile(
+    launches ? raisedLaunchesFileName : raisedEventsFileName,
+    "utf8",
+    callback
+  );
+}
+
+function saveRaisedNotifications(raisedNotifications, launches) {
+  console.log("writing file");
+  fs.writeFile(
+    launches ? raisedLaunchesFileName : raisedEventsFileName,
+    JSON.stringify(raisedNotifications),
+    function (err) {
+      if (err) {
+        return console.log(err);
+      }
+      console.log("wrote file");
+    }
+  );
+}
+
+function isDataSetIn(dataSet, array) {
+  if (array.length === 0) {
+    return false;
+  }
+  for (let index = 0; index < array.length; index++) {
+    const element = array[index];
+    if (element.id === dataSet.id && element.date === dataSet.date) {
+      return true;
+    }
+  }
+  return false;
+}
+
+readRaisedNotifications(true, sendNotificationsForUpcomingLaunches);
+readRaisedNotifications(false, sendNotificationsForUpcomingEvents);
