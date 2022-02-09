@@ -98,7 +98,7 @@ function sendNotificationsForMappedData(
       const timeDiff = new Date(dataSet.date).valueOf() - new Date().valueOf();
       const secondDiff = timeDiff / 1000;
       const minuteDiff = secondDiff / 60;
-      if (minuteDiff <= 15000 && minuteDiff >= 0) {
+      if (minuteDiff <= 15 && minuteDiff >= 0) {
         raisedNotifications.push(dataSet);
         raiseNotification(dataSet);
         change = true;
