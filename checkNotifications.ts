@@ -145,7 +145,7 @@ async function raiseNotification(dataSet) {
     "Upcoming " +
       dataSet.type +
       " in less than 15 Minutes at " +
-      new Date(dataSet.date).toLocaleTimeString("de") +
+      new Date(dataSet.date).toLocaleTimeString("de-DE", {timeZone: "Europe/Berlin"}) +
       " CET",
     dataSet.title,
     dataSet.image,
